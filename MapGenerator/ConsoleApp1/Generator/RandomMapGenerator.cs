@@ -19,7 +19,7 @@ namespace MapGenerator.Code.Generator
         {
             if (count == 0)
             {
-                return CreateRoom(map, rects);
+                return CreateRoom(map, rects,dividions);
             }
 
             count--;
@@ -37,7 +37,7 @@ namespace MapGenerator.Code.Generator
                 rects = new List<Rect>();
 
 
-            isX = isX == null ? new Random().Next(0, 2) == 0 : ! isX;
+            isX = isX == null ? new Random().Next(0, 2) == 0 : !isX.Value;
 
             var dividerStartPoint = new Point(
                 isX.Value ? new Random().Next(nextRect.StartPosition.x, (nextRect.StartPosition.x + nextRect.Size.x) - 1) : nextRect.StartPosition.x,
@@ -52,9 +52,7 @@ namespace MapGenerator.Code.Generator
 
             for (var i = 0; i < (isX.Value ? nextRect.Size.y : nextRect.Size.x); i++)
             {
-                map[Ycount, Xcount] = 1;
-                if((isX.Value ? Ycount : Xcount) < divide.Length)
-                     divide[isX.Value ? Ycount : Xcount] = new Point(Xcount, Ycount);
+                divide[i] = new Point(Xcount+1, Ycount+1);
 
                 if (isX.Value)
                     Ycount++;
@@ -86,31 +84,32 @@ namespace MapGenerator.Code.Generator
                 leargeRect = isUpSmall ? downSideRect : upSideRect;
             }
 
-            dividions.Add(divide);
 
             if (smallRect.IsValidSize)
-               rects.Add(smallRect);
-            
-            DebugConsole(map);
+            {
+                rects.Add(smallRect);
+                dividions.Add(divide);
+            }
 
-            return GenerateMap(count, map, leargeRect, dividions, rects);
+            return GenerateMap(count, map, leargeRect, dividions, rects,isX:isX);
         }
 
-        private static int[,] CreateRoom(int[,] map, List<Rect> rects)
+        private static int[,] CreateRoom(int[,] map, List<Rect> rects,List<Point[]> dividions)
         {
-            // 周りを壁にする
-            for (var i = 0; i < map.GetLength(0);i++)
-            {
-                for(var j = 0; j < map.GetLength(1);j++)
-                {
-                    if (i == 0 || i == map.GetLength(0) - 1 || j == 0 || j == map.GetLength(1) - 1)
-                        map[i, j] = 0;
-                }
-            }
 
             if (rects == null || rects.Count == 0)
             {
                 return GenerateMap(5, map);
+            }
+
+            // 通路を作る
+            foreach (var divide in dividions)
+            {
+                for(var i = 0; i < divide.Length; i++)
+                {
+                   map[divide[i].y - 1, divide[i].x - 1] = 1;
+                }
+                DebugConsole(map);
             }
 
             foreach (var rect in rects)
@@ -125,6 +124,18 @@ namespace MapGenerator.Code.Generator
 
                 DebugConsole(map);
             }
+
+            // 周りを壁にする
+            for (var i = 0; i < map.GetLength(0); i++)
+            {
+                for (var j = 0; j < map.GetLength(1); j++)
+                {
+                    if (i == 0 || i == map.GetLength(0) - 1 || j == 0 || j == map.GetLength(1) - 1)
+                        map[i, j] = 0;
+                }
+            }
+
+            DebugConsole(map);
 
             return map;
         }
