@@ -8,89 +8,24 @@ namespace MapGenerator.Code.Generator
 {
     public class RandomMapGenerator
     {
-        public static int[,] Generate(int x, int y)
-        {
-            var map = new int[y, x];
-
-            var isX = new Random().Next(0, 2) == 0;
-
-            var startPoint = new Point(
-                isX ? new Random().Next(0, map.GetLength(1) - 1) : 0,
-                !isX ? new Random().Next(0, map.GetLength(0) - 1) : 0);
-
-            var Xcount = isX ? startPoint.x : 0;
-            var Ycount = !isX ? startPoint.y : 0;
-
-            var dividions = new List<Point[]>();
-            var rects = new List<Rect>();
-
-
-            var divide = new Point[isX ? map.GetLength(0) : map.GetLength(1)];
-
-            for (var i = 0; i < (isX ? map.GetLength(0):map.GetLength(1)); i++)
-            {
-                map[Ycount, Xcount] = 1;
-                divide[isX ? Ycount : Xcount] = new Point(Xcount, Ycount);
-
-                if (isX)
-                    Ycount++;
-                else
-                    Xcount++;
-            }
-
-            Rect leargeRect;
-            Rect smallRect;
-            if (isX)
-            {
-                var isLeft = map.GetLength(1) - startPoint.x > map.GetLength(1) / 2;
-                if (isLeft)
-                {
-                    smallRect = new Rect(0, 0, startPoint.x - 1, map.GetLength(0));
-                    leargeRect = new Rect(startPoint.x + 1, 0, map.GetLength(1) - startPoint.x - 1, map.GetLength(0));
-                }
-                else
-                {
-                    leargeRect = new Rect(0, 0, startPoint.x - 1, map.GetLength(0));
-                    smallRect = new Rect(startPoint.x + 1, 0, map.GetLength(1) - startPoint.x - 1, map.GetLength(0));
-                }
-            }
-            else
-            {
-                var isUp = map.GetLength(0) - startPoint.y > map.GetLength(0) / 2;
-                if (isUp)
-                {
-                    smallRect = new Rect(0, 0, map.GetLength(1), startPoint.y - 1);
-                    leargeRect = new Rect(0, startPoint.y + 1, map.GetLength(1), map.GetLength(0) - startPoint.y - 1);
-                }
-                else
-                {
-                    leargeRect = new Rect(0, 0, map.GetLength(1), startPoint.y - 1);
-                    smallRect = new Rect(0, startPoint.y + 1, map.GetLength(1), map.GetLength(0) - startPoint.y - 1);
-                }
-            }
-
-            dividions.Add(divide);
-
-            if(smallRect.IsValidSize)
-                rects.Add(smallRect);
-
-            return map;
-        }
-
         public static int[,] GenerateMap(
-            int x, int y,int count,
+            int count,
             int[,] map = null,
             Rect nextRect = null,
             List<Point[]> dividions = null,
-            List<Rect> rects = null)
+            List<Rect> rects = null,
+            bool? isX = null
+            )
         {
             if (count == 0)
-                return map;
+            {
+                return CreateRoom(map, rects);
+            }
 
             count--;
 
             if (map == null)
-                map = new int[y, x];
+                throw new Exception();
 
             if (nextRect == null)
                 nextRect = new Rect(0, 0, map.GetLength(1), map.GetLength(0));
@@ -102,17 +37,110 @@ namespace MapGenerator.Code.Generator
                 rects = new List<Rect>();
 
 
-            var isX = new Random().Next(0, 2) == 0;
+            isX = isX == null ? new Random().Next(0, 2) == 0 : ! isX;
 
-            var startPoint = new Point(
-                isX ? new Random().Next(nextRect.StartPosition.x, (nextRect.StartPosition.x + nextRect.Size.x) - 1) : nextRect.StartPosition.x,
-                !isX ? new Random().Next(nextRect.StartPosition.y, (nextRect.StartPosition.y + nextRect.Size.y) - 1) : nextRect.StartPosition.y);
+            var dividerStartPoint = new Point(
+                isX.Value ? new Random().Next(nextRect.StartPosition.x, (nextRect.StartPosition.x + nextRect.Size.x) - 1) : nextRect.StartPosition.x,
+                !isX.Value ? new Random().Next(nextRect.StartPosition.y, (nextRect.StartPosition.y + nextRect.Size.y) - 1) : nextRect.StartPosition.y
+                );
 
-            var Xcount = isX ? startPoint.x : nextRect.StartPosition.x;
-            var Ycount = !isX ? startPoint.y : nextRect.StartPosition.y;
+            var Xcount = isX.Value ? dividerStartPoint.x : nextRect.StartPosition.x;
+            var Ycount = !isX.Value ? dividerStartPoint.y : nextRect.StartPosition.y;
 
+
+            var divide = new Point[isX.Value ? nextRect.Size.y : nextRect.Size.x ];
+
+            for (var i = 0; i < (isX.Value ? nextRect.Size.y : nextRect.Size.x); i++)
+            {
+                map[Ycount, Xcount] = 1;
+                if((isX.Value ? Ycount : Xcount) < divide.Length)
+                     divide[isX.Value ? Ycount : Xcount] = new Point(Xcount, Ycount);
+
+                if (isX.Value)
+                    Ycount++;
+                else
+                    Xcount++;
+            }
+
+            Rect leargeRect;
+            Rect smallRect;
+
+            if (isX.Value)
+            {
+                var isLeftSmall = dividerStartPoint.x - nextRect.StartPosition.x  <  nextRect.Size.x / 2;
+
+                var leftSideRect = new Rect(nextRect.StartPosition.x, nextRect.StartPosition.y, dividerStartPoint.x - nextRect.StartPosition.x - 1, nextRect.Size.y);
+                var rightSideRect = new Rect(dividerStartPoint.x + 1, nextRect.StartPosition.y, (nextRect.StartPosition.x + nextRect.Size.x) - dividerStartPoint.x - 1, nextRect.Size.y);
+
+                smallRect = isLeftSmall ? leftSideRect : rightSideRect;
+                leargeRect = isLeftSmall ? rightSideRect : leftSideRect;
+            }
+            else
+            {
+                var isUpSmall = dividerStartPoint.y - nextRect.StartPosition.y < nextRect.Size.y / 2;
+
+                var upSideRect = new Rect(nextRect.StartPosition.x, nextRect.StartPosition.y, nextRect.Size.x, dividerStartPoint.y - nextRect.StartPosition.y - 1);
+                var downSideRect = new Rect(nextRect.StartPosition.x,dividerStartPoint.y + 1, nextRect.Size.x, (nextRect.StartPosition.y + nextRect.Size.y) - dividerStartPoint.y - 1);
+
+                smallRect = isUpSmall ? upSideRect : downSideRect;
+                leargeRect = isUpSmall ? downSideRect : upSideRect;
+            }
+
+            dividions.Add(divide);
+
+            if (smallRect.IsValidSize)
+               rects.Add(smallRect);
+            
+            DebugConsole(map);
+
+            return GenerateMap(count, map, leargeRect, dividions, rects);
+        }
+
+        private static int[,] CreateRoom(int[,] map, List<Rect> rects)
+        {
+            // 周りを壁にする
+            for (var i = 0; i < map.GetLength(0);i++)
+            {
+                for(var j = 0; j < map.GetLength(1);j++)
+                {
+                    if (i == 0 || i == map.GetLength(0) - 1 || j == 0 || j == map.GetLength(1) - 1)
+                        map[i, j] = 0;
+                }
+            }
+
+            if (rects == null || rects.Count == 0)
+            {
+                return GenerateMap(5, map);
+            }
+
+            foreach (var rect in rects)
+            {
+                for (var i = rect.StartPosition.y + 1; i < rect.StartPosition.y + rect.Size.y - 1; i++)
+                {
+                    for (var j = rect.StartPosition.x + 1; j < rect.StartPosition.x + rect.Size.x - 1; j++)
+                    {
+                        map[i, j] = 2;
+                    }
+                }
+
+                DebugConsole(map);
+            }
 
             return map;
+        }
+
+        public static void DebugConsole(int[,] map)
+        {
+            for (var i = 0; i < map.GetLength(0); i++)
+            {
+                for (var j = 0; j < map.GetLength(1); j++)
+                {
+                    Console.Write(map[i, j]);
+                }
+                Console.WriteLine("");
+            }
+
+            Console.WriteLine("");
         }
     }
 
@@ -122,7 +150,7 @@ namespace MapGenerator.Code.Generator
         public readonly Point Size;
 
 
-        private static int smallestSize = 6;
+        private static int smallestSize = 5;
         public bool IsValidSize { get => this.Size.x > smallestSize && this.Size.y > smallestSize; }
 
         public Rect(int startPositionX, int startPositionY, int sizeX, int sizeY)
