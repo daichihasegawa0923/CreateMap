@@ -7,7 +7,7 @@ namespace MapGenerator.Code
     {
         static void Main(string[] args)
         {
-            var map = RandomMapGenerator.Generate(10, 10);
+            var map = RandomMapGenerator.Generate(30, 30);
             for (var i = 0; i < map.GetLength(0); i++)
             {
                 for(var j = 0; j < map.GetLength(1); j++)
