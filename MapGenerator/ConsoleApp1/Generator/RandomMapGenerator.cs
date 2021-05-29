@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MapGenerator.Code.Generator
 {
@@ -57,8 +54,8 @@ namespace MapGenerator.Code.Generator
 
             //  通路を生成する初期位置をを決める
             var dividerStartPoint = new Point(
-                isX.Value ? new Random().Next(nextRect.StartPosition.x, (nextRect.StartPosition.x + nextRect.Size.x) - 1) : nextRect.StartPosition.x,
-                !isX.Value ? new Random().Next(nextRect.StartPosition.y, (nextRect.StartPosition.y + nextRect.Size.y) - 1) : nextRect.StartPosition.y
+                isX.Value ? new Random().Next(nextRect.StartPosition.x, (nextRect.StartPosition.x + nextRect.Size.x)) : nextRect.StartPosition.x,
+                !isX.Value ? new Random().Next(nextRect.StartPosition.y, (nextRect.StartPosition.y + nextRect.Size.y)) : nextRect.StartPosition.y
                 );
 
             var Xcount = isX.Value ? dividerStartPoint.x : nextRect.StartPosition.x;
@@ -148,13 +145,15 @@ namespace MapGenerator.Code.Generator
         /// <returns>部屋が生成された整数の二次元配列</returns>
         private static int[,] CreateRoom(int[,] map, List<Rect> rects,List<Point[]> dividions)
         {
+            rects = ResizeRects(rects);
+
             if (rects == null || rects.Count == 0 || dividions.Count != rects.Count)
             {
                 return GenerateMap(5, map);
             }
 
             // 部屋と通路を繋げる
-            // CreateConnection(map, dividions, rects);
+            CreateConnection(map, dividions, rects);
 
             // 通路を作る
             foreach (var divide in dividions)
@@ -167,9 +166,9 @@ namespace MapGenerator.Code.Generator
 
             foreach (var rect in rects)
             {
-                for (var i = rect.StartPosition.y + 1; i < rect.StartPosition.y + rect.Size.y - 1; i++)
+                for (var i = rect.StartPosition.y; i < rect.StartPosition.y + rect.Size.y; i++)
                 {
-                    for (var j = rect.StartPosition.x + 1; j < rect.StartPosition.x + rect.Size.x - 1; j++)
+                    for (var j = rect.StartPosition.x; j < rect.StartPosition.x + rect.Size.x; j++)
                     {
                         map[i, j] = 2;
                     }
@@ -185,17 +184,24 @@ namespace MapGenerator.Code.Generator
                         map[i, j] = 0;
                 }
             }
-            DebugConsole(map);
 
             return map;
         }
 
+        /// <summary>
+        /// 部屋同士を接続する
+        /// </summary>
+        /// <param name="map">int型の二次元配列</param>
+        /// <param name="dividions">通路</param>
+        /// <param name="rects">部屋</param>
         private static void CreateConnection(int[,] map,List<Point[]> dividions,List<Rect> rects)
         {
-            for (var i = 0; i < dividions.Count - 1; i++)
+            for (var i = 0; i < dividions.Count; i++)
             {
                 var bRect = rects[i];
-                var nRect = rects[i + 1];
+
+                var nRect = i < dividions.Count - 1 ? rects[i + 1] : null;
+
                 var divide = dividions[i];
                 var isXDivide = IsXDivide(divide);
 
@@ -207,33 +213,53 @@ namespace MapGenerator.Code.Generator
 
                 Func<Rect, bool, Point> getStartPositionOfConnection = (rect, isX) =>
                 {
-                    var x = isX ? new Random().Next(bRect.StartPosition.y, bRect.StartPosition.y + bRect.Size.y) : rect.StartPosition.y;
-                    var y = isX ? new Random().Next(bRect.StartPosition.x, bRect.StartPosition.x + bRect.Size.x) : rect.StartPosition.x;
-
+                    var x = !isX ? new Random().Next(rect.StartPosition.x,rect.StartPosition.x + rect.Size.x) : rect.StartPosition.x; 
+                    var y = isX ? new Random().Next(rect.StartPosition.y, rect.StartPosition.y + rect.Size.y) : rect.StartPosition.y;
                     return new Point(x, y);
                 };
 
-                Action<int, bool, Point> connectionReflectMap = (distance, isX, point) =>
+                Action<int, bool, Point,Rect> connectionReflectMap = (distance, isX, connectionStartPoint,rect) =>
                   {
-                      for (var j = 0; j < MathF.Abs(distance) - 1; j++)
+                      for (var j = 0; j < MathF.Abs(distance); j++)
                       {
-                          var d = j * (int)(MathF.Abs(distance) / distance);
-                          var x = !isXDivide ? bRect.StartPosition.x - d : point.x;
-                          var y = !isXDivide ? point.y : bRect.StartPosition.y - d;
-                          map[x, y] = 4;
+                          var d = j * (int)(MathF.Abs(distance) / distance) - (distance < 0 ? 1 : 0);
+
+                          var x = !isXDivide ? connectionStartPoint.x : rect.StartPosition.x - d;
+                          var y = isXDivide ? connectionStartPoint.y : rect.StartPosition.y - d;
+
+                          x = x < 0 ? 0 : x < map.GetLength(1) ? x: map.GetLength(1) - 1;
+                          y = y < 0 ? 0 : y < map.GetLength(0) ? y: map.GetLength(0) - 1;
+
+                          map[y, x] = 4;
                       }
                   };
 
                 var bDistance = getDistance(bRect, divide, isXDivide);
-                var nDistance = getDistance(nRect, divide, isXDivide);
 
                 var bStartConnectPoint = getStartPositionOfConnection(bRect, isXDivide);
-                var nStartConnectPoint = getStartPositionOfConnection(nRect, isXDivide);
 
-                connectionReflectMap(bDistance, isXDivide, bStartConnectPoint);
-                connectionReflectMap(nDistance, !isXDivide, nStartConnectPoint);
-                DebugConsole(map);
+                connectionReflectMap(bDistance, isXDivide, bStartConnectPoint,bRect);
+                
+                if (nRect != null)
+                {
+                    var nDistance = getDistance(nRect, divide, isXDivide);
+                    var nStartConnectPoint = getStartPositionOfConnection(nRect, isXDivide);
+                    connectionReflectMap(nDistance, isXDivide, nStartConnectPoint, nRect);
+                }
             }
+        }
+
+        private static List<Rect> ResizeRects(List<Rect> rects)
+        {
+            var resizedRect = new List<Rect>();
+            rects.ForEach(r => 
+            {
+                var resize = new Point(r.Size.x - 2, r.Size.y - 2);
+                var rePosition = new Point(r.StartPosition.x + 1, r.StartPosition.y + 1);
+               resizedRect.Add(new Rect(rePosition.x, rePosition.y, resize.x, resize.y));
+            });
+
+            return resizedRect;
         }
 
         public static void DebugConsole(int[,] map)
