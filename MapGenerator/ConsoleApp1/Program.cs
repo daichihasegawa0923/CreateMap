@@ -7,7 +7,7 @@ namespace MapGenerator.Code
     {
         static void Main(string[] args)
         {
-            var map = RandomMapGenerator.GenerateMap(10, new int[60, 70]);
+            var map = RandomMapGenerator.GenerateMap(5, new int[20, 20]);
 
             RandomMapGenerator.DebugConsole(map); 
         }

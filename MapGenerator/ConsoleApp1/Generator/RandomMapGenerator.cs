@@ -6,9 +6,22 @@ using System.Threading.Tasks;
 
 namespace MapGenerator.Code.Generator
 {
+    /// <summary>
+    ///  ランダムなマップを生成するクラス（区域分割法）
+    /// </summary>
     public class RandomMapGenerator
     {
-        public static int[,] GenerateMap(
+        /// <summary>
+        /// ランダムなマップを生成します
+        /// </summary>
+        /// <param name="count">作りたい部屋数</param>
+        /// <param name="map">整数の二次元配列</param>
+        /// <param name="nextRect">次に分割する部屋</param>
+        /// <param name="dividions">通路を管理する配列</param>
+        /// <param name="rects">分割された部屋を管理する配列</param>
+        /// <param name="isX">縦に分割するか、横に分割するか</param>
+        /// <returns>ランダムなマップ</returns>
+        private static int[,] GenerateMap(
             int count,
             int[,] map = null,
             Rect nextRect = null,
@@ -17,6 +30,7 @@ namespace MapGenerator.Code.Generator
             bool? isX = null
             )
         {
+            // カウントが０になったら処理を止める
             if (count == 0)
             {
                 return CreateRoom(map, rects,dividions);
@@ -24,9 +38,11 @@ namespace MapGenerator.Code.Generator
 
             count--;
 
+            // 引数にマップがない場合は、例外を投げる
             if (map == null)
                 throw new Exception();
 
+            
             if (nextRect == null)
                 nextRect = new Rect(0, 0, map.GetLength(1), map.GetLength(0));
 
@@ -36,9 +52,12 @@ namespace MapGenerator.Code.Generator
             if (rects == null)
                 rects = new List<Rect>();
 
-
+            // 縦割りと横わりを再帰するたびに切り替える
             isX = isX == null ? new Random().Next(0, 2) == 0 : !isX.Value;
 
+            DebugConsole(nextRect);
+
+            //  通路を生成する初期位置をを決める
             var dividerStartPoint = new Point(
                 isX.Value ? new Random().Next(nextRect.StartPosition.x, (nextRect.StartPosition.x + nextRect.Size.x) - 1) : nextRect.StartPosition.x,
                 !isX.Value ? new Random().Next(nextRect.StartPosition.y, (nextRect.StartPosition.y + nextRect.Size.y) - 1) : nextRect.StartPosition.y
@@ -94,9 +113,42 @@ namespace MapGenerator.Code.Generator
             return GenerateMap(count, map, leargeRect, dividions, rects,isX:isX);
         }
 
-        private static int[,] CreateRoom(int[,] map, List<Rect> rects,List<Point[]> dividions)
+        /// <summary>
+        /// ランダムなマップを生成します
+        /// </summary>
+        /// <param name="count">作りたい部屋数</param>
+        /// <param name="map">整数の二次元配列</param>
+        /// <returns>ランダムなマップ</returns>
+        public static int[,] GenerateMap(
+            int count,
+            int[,] map
+            )
         {
 
+            // 引数にマップがない場合は、例外を投げる
+            if (map == null)
+                throw new Exception();
+
+            var nextRect = new Rect(0, 0, map.GetLength(1), map.GetLength(0));
+            
+            var  dividions = new List<Point[]>();
+
+            var rects = new List<Rect>();
+
+            bool? isX = new Random().Next(0, 2) == 0;
+
+            return GenerateMap(count, map, nextRect, dividions, rects, isX);
+        }
+
+        /// <summary>
+        /// 受け取った情報をもとに部屋を生成します。
+        /// </summary>
+        /// <param name="map">整数の二次元配列</param>
+        /// <param name="rects">部屋の情報</param>
+        /// <param name="dividions">通路の情報</param>
+        /// <returns>部屋が生成された整数の二次元配列</returns>
+        private static int[,] CreateRoom(int[,] map, List<Rect> rects,List<Point[]> dividions)
+        {
             if (rects == null || rects.Count == 0)
             {
                 return GenerateMap(5, map);
@@ -142,6 +194,9 @@ namespace MapGenerator.Code.Generator
 
         public static void DebugConsole(int[,] map)
         {
+
+            Console.WriteLine("");
+
             for (var i = 0; i < map.GetLength(0); i++)
             {
                 for (var j = 0; j < map.GetLength(1); j++)
@@ -150,7 +205,12 @@ namespace MapGenerator.Code.Generator
                 }
                 Console.WriteLine("");
             }
+        }
 
+        public static void DebugConsole(Rect rect)
+        {
+            Console.WriteLine("");
+            Console.WriteLine(string.Format("Rect position X:{0},Y:{1},size X:{2},Y{3}", rect.StartPosition.x, rect.StartPosition.y, rect.Size.x, rect.Size.y));
             Console.WriteLine("");
         }
     }
