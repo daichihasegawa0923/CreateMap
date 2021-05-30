@@ -8,7 +8,7 @@ namespace MapGenerator.Code.Generator
     /// </summary>
     public class RandomMapGenerator
     {
-        public static readonly int maxSize = 10;
+        public static readonly int maxSize = 15;
 
         /// <summary>
         /// ランダムなマップを生成します
@@ -99,12 +99,12 @@ namespace MapGenerator.Code.Generator
                 leargeRect = isUpSmall ? downSideRect : upSideRect;
             }
 
-            smallRect = new Rect(smallRect.StartPosition.x, smallRect.StartPosition.y,
-                smallRect.Size.x > maxSize ? maxSize : smallRect.Size.x,
-                smallRect.Size.y > maxSize ? maxSize : smallRect.Size.y);
-
             if (smallRect.IsValidSize)
             {
+                smallRect = new Rect(smallRect.StartPosition.x, smallRect.StartPosition.y,
+                    new Random().Next(Rect.smallestSize, smallRect.Size.x > maxSize ? maxSize : smallRect.Size.x),
+                    new Random().Next(Rect.smallestSize, smallRect.Size.y > maxSize ? maxSize : smallRect.Size.y));
+
                 rects.Add(smallRect);
                 dividions.Add(divide);
             }
@@ -129,7 +129,7 @@ namespace MapGenerator.Code.Generator
             if (map == null)
                 throw new Exception();
 
-            var nextRect = new Rect(1, 1, map.GetLength(1) - 1, map.GetLength(0) - 1);
+            var nextRect = new Rect(1, 1, map.GetLength(1) - 2, map.GetLength(0) - 2);
             
             var  dividions = new List<Point[]>();
 
@@ -159,14 +159,6 @@ namespace MapGenerator.Code.Generator
             // 部屋と通路を繋げる
             CreateConnection(map, dividions, rects);
 
-            // 通路を作る
-            //foreach (var divide in dividions)
-            //{
-              //  for(var i = 0; i < divide.Length; i++)
-                //{
-                 //  map[divide[i].y - 1, divide[i].x - 1] = 1;
-                //}
-            //}
 
             // 周りを壁にする
             for (var i = 0; i < map.GetLength(0); i++)
@@ -213,9 +205,9 @@ namespace MapGenerator.Code.Generator
 
                 Action<int, bool, Point,Rect> connectionReflectMap = (distance, isX, connectionStartPoint,rect) =>
                   {
-                      for (var j = 0; j < MathF.Abs(distance); j++)
+                      for (var j = 0; j < Math.Abs(distance); j++)
                       {
-                          var d = j * (int)(MathF.Abs(distance) / distance) - (distance < 0 ? 1 : 0);
+                          var d = j * (int)(Math.Abs(distance) / distance) - (distance < 0 ? 1 : 0);
 
                           var x = !isX ? connectionStartPoint.x : rect.StartPosition.x - d;
                           var y = isX ? connectionStartPoint.y : rect.StartPosition.y - d;
@@ -223,7 +215,7 @@ namespace MapGenerator.Code.Generator
                           x = x < 0 ? 0 : x < map.GetLength(1) ? x: map.GetLength(1) - 1;
                           y = y < 0 ? 0 : y < map.GetLength(0) ? y: map.GetLength(0) - 1;
 
-                          map[y, x] = 4 + i;
+                          map[y, x] = 4;
                       }
                   };
 
@@ -341,7 +333,7 @@ namespace MapGenerator.Code.Generator
         public readonly Point Size;
 
 
-        private static int smallestSize = 4;
+        public readonly static int smallestSize = 4;
         public bool IsValidSize { get => this.Size.x > smallestSize && this.Size.y > smallestSize; }
 
         public Rect(int startPositionX, int startPositionY, int sizeX, int sizeY)

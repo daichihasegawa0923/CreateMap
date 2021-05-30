@@ -8,11 +8,11 @@ namespace MapGenerator.Code
     {
         static void Main(string[] args)
         {
-            var map = RandomMapGenerator.GenerateMap(10, new int[50, 50]);
 
             Directory.CreateDirectory("maps");
-            for(var i = 0; i < 2000; i++)
+            for(var i = 0; i < 200; i++)
             {
+                var map = RandomMapGenerator.GenerateMap(15, new int[50, 50]);
                 MapDebugger.MapDebugByText(map,"maps/map_"+i+".txt");
             }
         }
