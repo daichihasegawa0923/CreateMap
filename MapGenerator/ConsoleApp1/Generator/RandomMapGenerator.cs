@@ -8,6 +8,8 @@ namespace MapGenerator.Code.Generator
     /// </summary>
     public class RandomMapGenerator
     {
+        public static readonly int maxSize = 10;
+
         /// <summary>
         /// ランダムなマップを生成します
         /// </summary>
@@ -23,8 +25,7 @@ namespace MapGenerator.Code.Generator
             int[,] map = null,
             Rect nextRect = null,
             List<Point[]> dividions = null,
-            List<Rect> rects = null,
-            bool? isX = null
+            List<Rect> rects = null
             )
         {
             // カウントが０になったら処理を止める
@@ -50,7 +51,7 @@ namespace MapGenerator.Code.Generator
                 rects = new List<Rect>();
 
             // 縦割りと横わりを再帰するたびに切り替える
-            isX = isX == null ? new Random().Next(0, 2) == 0 : !isX.Value;
+            bool? isX = new Random().Next(0, 2) == 0;
 
             //  通路を生成する初期位置をを決める
             var dividerStartPoint = new Point(
@@ -98,6 +99,9 @@ namespace MapGenerator.Code.Generator
                 leargeRect = isUpSmall ? downSideRect : upSideRect;
             }
 
+            smallRect = new Rect(smallRect.StartPosition.x, smallRect.StartPosition.y,
+                smallRect.Size.x > maxSize ? maxSize : smallRect.Size.x,
+                smallRect.Size.y > maxSize ? maxSize : smallRect.Size.y);
 
             if (smallRect.IsValidSize)
             {
@@ -106,7 +110,7 @@ namespace MapGenerator.Code.Generator
             }
 
 
-            return GenerateMap(count, map, leargeRect, dividions, rects,isX:isX);
+            return GenerateMap(count, map, leargeRect, dividions, rects);
         }
 
         /// <summary>
@@ -125,7 +129,7 @@ namespace MapGenerator.Code.Generator
             if (map == null)
                 throw new Exception();
 
-            var nextRect = new Rect(1, 1, map.GetLength(1) - 2, map.GetLength(0) - 2);
+            var nextRect = new Rect(1, 1, map.GetLength(1) - 1, map.GetLength(0) - 1);
             
             var  dividions = new List<Point[]>();
 
@@ -133,7 +137,7 @@ namespace MapGenerator.Code.Generator
 
             bool? isX = new Random().Next(0, 2) == 0;
 
-            return GenerateMap(count, map, nextRect, dividions, rects, isX);
+            return GenerateMap(count, map, nextRect, dividions, rects);
         }
 
         /// <summary>
@@ -156,24 +160,13 @@ namespace MapGenerator.Code.Generator
             CreateConnection(map, dividions, rects);
 
             // 通路を作る
-            foreach (var divide in dividions)
-            {
-                for(var i = 0; i < divide.Length; i++)
-                {
-                   map[divide[i].y - 1, divide[i].x - 1] = 1;
-                }
-            }
-
-            foreach (var rect in rects)
-            {
-                for (var i = rect.StartPosition.y; i < rect.StartPosition.y + rect.Size.y; i++)
-                {
-                    for (var j = rect.StartPosition.x; j < rect.StartPosition.x + rect.Size.x; j++)
-                    {
-                        map[i, j] = 2;
-                    }
-                }
-            }
+            //foreach (var divide in dividions)
+            //{
+              //  for(var i = 0; i < divide.Length; i++)
+                //{
+                 //  map[divide[i].y - 1, divide[i].x - 1] = 1;
+                //}
+            //}
 
             // 周りを壁にする
             for (var i = 0; i < map.GetLength(0); i++)
@@ -196,11 +189,11 @@ namespace MapGenerator.Code.Generator
         /// <param name="rects">部屋</param>
         private static void CreateConnection(int[,] map,List<Point[]> dividions,List<Rect> rects)
         {
-            for (var i = 0; i < dividions.Count; i++)
+            for (var i = 0; i < dividions.Count - 1; i++)
             {
                 var bRect = rects[i];
 
-                var nRect = i < dividions.Count - 1 ? rects[i + 1] : null;
+                var nRect = rects[i + 1];
 
                 var divide = dividions[i];
                 var isXDivide = IsXDivide(divide);
@@ -224,27 +217,75 @@ namespace MapGenerator.Code.Generator
                       {
                           var d = j * (int)(MathF.Abs(distance) / distance) - (distance < 0 ? 1 : 0);
 
-                          var x = !isXDivide ? connectionStartPoint.x : rect.StartPosition.x - d;
-                          var y = isXDivide ? connectionStartPoint.y : rect.StartPosition.y - d;
+                          var x = !isX ? connectionStartPoint.x : rect.StartPosition.x - d;
+                          var y = isX ? connectionStartPoint.y : rect.StartPosition.y - d;
 
                           x = x < 0 ? 0 : x < map.GetLength(1) ? x: map.GetLength(1) - 1;
                           y = y < 0 ? 0 : y < map.GetLength(0) ? y: map.GetLength(0) - 1;
 
-                          map[y, x] = 4;
+                          map[y, x] = 4 + i;
                       }
                   };
 
+                Action<Point, Point, Point[]> roadReflectMap = (startConnectionPoint1, startConnectionPoint2, divide) =>
+                    {
+                        if (divide.Length == 0)
+                            return;
+                        if (divide.Length == 1)
+                        {
+                            map[divide[0].y, divide[1].x] = 1;
+                            return;
+                        }
+
+                        var isX = divide[0].x == divide[1].x;
+
+                        if (isX)
+                        {
+                            var divideFirstPoint = startConnectionPoint1.y < startConnectionPoint2.y ?
+                            startConnectionPoint1 : startConnectionPoint2;
+                            var divideEndPoint = startConnectionPoint1.y >= startConnectionPoint2.y ?
+                            startConnectionPoint1 : startConnectionPoint2;
+
+                            for (var dY = divideFirstPoint.y; dY <= divideEndPoint.y; dY++)
+                            {
+                                map[dY, divide[0].x] = 1;
+                            }
+
+                        }
+                        else
+                        {
+                            var divideFirstPoint = startConnectionPoint1.x < startConnectionPoint2.x ?
+                            startConnectionPoint1 : startConnectionPoint2;
+                            var divideEndPoint = startConnectionPoint1.x >= startConnectionPoint2.x ?
+                            startConnectionPoint1 : startConnectionPoint2;
+
+                            for (var dX = divideFirstPoint.x; dX <= divideEndPoint.x; dX++)
+                            {
+                                map[divide[0].y, dX] = 1;
+                            }
+                        }
+
+                    };
+
                 var bDistance = getDistance(bRect, divide, isXDivide);
-
                 var bStartConnectPoint = getStartPositionOfConnection(bRect, isXDivide);
-
                 connectionReflectMap(bDistance, isXDivide, bStartConnectPoint,bRect);
-                
-                if (nRect != null)
+
+                var nDistance = getDistance(nRect, divide, isXDivide);
+                var nStartConnectPoint = getStartPositionOfConnection(nRect, isXDivide);
+                connectionReflectMap(nDistance, isXDivide, nStartConnectPoint, nRect);
+
+                roadReflectMap(bStartConnectPoint, nStartConnectPoint, divide);
+            }
+
+            for(var i = 0; i < rects.Count; i++)
+            {
+                for(var y  = rects[i].StartPosition.y; y < rects[i].StartPosition.y + rects[i].Size.y; y++)
                 {
-                    var nDistance = getDistance(nRect, divide, isXDivide);
-                    var nStartConnectPoint = getStartPositionOfConnection(nRect, isXDivide);
-                    connectionReflectMap(nDistance, isXDivide, nStartConnectPoint, nRect);
+                    for (var x = rects[i].StartPosition.x; x < rects[i].StartPosition.x + rects[i].Size.x; x++)
+                    {
+                        map[y, x] = 2;
+                    }
                 }
             }
         }
